@@ -8,9 +8,13 @@ def post_list(request):
     return render(request, 'blog/post/list.html', {'posts': posts})
 
 
-def post_detail(request, id):
+def post_detail(request, year, month, day, post):
     # Retrieve the object that matches the given parameters or and Http404 exceptioon if no object is found
-    post = get_object_or_404(Post, id=id, status=Post.Status.PUBLISHED)
+    post = get_object_or_404(Post, status=Post.Status.PUBLISHED,
+            slug=post,
+            publish__year=year,
+            publish__month=month,
+            publish__day=day)
     # try:
     #     post = Post.published.get(id=id)
     # except Post.DoesNotExist:
