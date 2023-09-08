@@ -3,8 +3,9 @@ from django.http import Http404
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.generic import ListView
 from django.core.mail import send_mail
-from blog.models import Post
-from blog.forms import EmailPostForm
+from django.views.decorators.http import require_POST
+from blog.models import Post, Comment
+from blog.forms import EmailPostForm, CommentForm
 
 
 def post_list(request):
@@ -36,7 +37,14 @@ def post_detail(request, year, month, day, post):
     # except Post.DoesNotExist:
     #     raise Http404("No post found.")
 
-    return render(request, 'blog/post/detail.html', {'post': post})
+
+    # List of active comments for this post
+    comments = post.comments.filter(active=True)
+    # Form for users to comment
+    form = CommentForm()
+
+    return render(request, 'blog/post/detail.html',
+            {'post': post, 'comments': comments, 'form': form})
 
 
 class PostListView(ListView):
@@ -68,3 +76,20 @@ def post_share(request, post_id):
     else:
         form = EmailPostForm()
     return render(request, 'blog/post/share.html', {'post': post, 'form': form, 'sent': sent})
+
+
+@require_POST
+def post_comment(request, post_id):
+    post = get_object_or_404(Post, id=post_id, status=Post.Status.PUBLISHED)
+    comment = None
+    # A comment was posted
+    form = CommentForm(data=request.POST)
+    if form.is_valid():
+        # Create a Comment object without saving it to the database
+        comment = form.save(commit=False)
+        # Assign the post to the comment
+        comment.post = post
+        # Save the comment to the database
+        comment.save()
+    return render(request, 'blog/post/comment.html',
+            {'post': post, 'form': form, 'comment': comment})
